@@ -164,7 +164,8 @@ def activate_render_passes(normal: bool = True,
   # default_view_layer = bpy.context.scene.view_layers[0]
 
   # blender 3 turned this off by default
-  bpy.context.scene.view_layers["ViewLayer"].use_pass_z = True
+  for view_layer in bpy.context.scene.view_layers:
+    view_layer.use_pass_z = True
 
   aux_view_layer = bpy.context.scene.view_layers.new("AuxOutputs")
   aux_view_layer.samples = 1  # only use 1 ray per pixel to disable anti-aliasing
