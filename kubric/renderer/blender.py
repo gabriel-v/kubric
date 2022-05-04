@@ -54,6 +54,7 @@ class Blender(core.View):
                verbose: bool = False,
                custom_scene: Optional[str] = None,
                motion_blur: Optional[float] = None,
+               custom_scene_shading: bool = False,
                ):
     """
     Args:
@@ -75,6 +76,9 @@ class Blender(core.View):
         If this argument is set to the path for a `.blend` file, then that scene is loaded instead.
         Note that this scene only affects the rendering output. It is not accessible from Kubric and
         not taken into account by the simulator.
+      custom_scene_shading: By default (False) Blender World shading is initialized by Kubric,
+        expecting a HDRI to be set. If this argument is set to True, the shading is left up to the
+        `custom_scene`.
     """
     self.scratch_dir = tempfile.mkdtemp() if scratch_dir is None else scratch_dir
     self.ambient_node = None
@@ -92,13 +96,11 @@ class Blender(core.View):
     # the ray-tracing engine is set here because it affects the availability of some features
     bpy.context.scene.render.engine = "CYCLES"
 
-    # blender 3 turned this off by default
-    bpy.context.scene.view_layers["ViewLayer"].use_pass_z = True
-
     self.use_gpu = os.getenv("KUBRIC_USE_GPU", "False").lower() in ("true", "1", "t")
 
     blender_utils.activate_render_passes(normal=True, optical_flow=True, segmentation=True, uv=True)
-    self._setup_scene_shading()
+    if not custom_scene_shading:
+      self._setup_scene_shading()
 
     self.adaptive_sampling = adaptive_sampling  # speeds up rendering
     self.use_denoising = use_denoising  # improves the output quality
@@ -120,7 +122,7 @@ class Blender(core.View):
         "rgba": blender_utils.process_rgba,
     }
 
-    super().__init__(scene, scene_observers={
+    obs = {
         "frame_start": [AttributeSetter(self.blender_scene, "frame_start")],
         "frame_end": [AttributeSetter(self.blender_scene, "frame_end")],
         "frame_rate": [AttributeSetter(self.blender_scene.render, "fps")],
@@ -130,9 +132,13 @@ class Blender(core.View):
                                        converter=lambda x: x[1])],
         "camera": [AttributeSetter(self.blender_scene, "camera",
                                    converter=self._convert_to_blender_object)],
-        "ambient_illumination": [lambda change: self._set_ambient_light_color(change.new)],
-        "background": [lambda change: self._set_background_color(change.new)],
-    })
+    }
+
+    if not custom_scene_shading:
+        obs["ambient_illumination"] = [lambda change: self._set_ambient_light_color(change.new)]
+        obs["background"] = [lambda change: self._set_background_color(change.new)]
+
+    super().__init__(scene, scene_observers=obs)
 
   @property
   def scratch_dir(self) -> Union[PathLike, None]:

@@ -32,7 +32,7 @@ import logging
 import json
 import multiprocessing
 import pickle
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from etils import epath
 import imageio
@@ -157,12 +157,15 @@ def write_palette_png(data: np.array, filename: PathLike,
     w.write(fp, data[:, :, 0])
 
 
-def write_scaled_png(data: np.array, filename: PathLike) -> Dict[str, float]:
+def write_scaled_png(data: np.array, filename: PathLike,
+                     clip_max: Optional[float] = 200) -> Dict[str, float]:
   """Scales data to [0, 1] and then saves as png and returns the scale.
 
   Args:
     data: the image (H, W, C) to be written (has to be float32 or float64).
     filename: the filename to write to (can be a GCS path).
+    clip_max: if set, clips array value with this max before scaling.
+      Useful when not using a skybox.
 
   Returns:
     {"min": min_value, "max": max_value}
@@ -171,6 +174,22 @@ def write_scaled_png(data: np.array, filename: PathLike) -> Dict[str, float]:
   min_value = np.min(data)
   max_value = np.max(data)
   scaling = {"min": min_value.item(), "max": max_value.item()}
+
+  if clip_max is not None:
+    data[data > 100000] = -1
+    max_value = np.max(data)
+    data[data == -1] = max_value.item()
+    scaling["max"] = max_value.item()
+
+    if clip_max < scaling["max"] \
+        and scaling["min"] < clip_max:
+      scaling["max"] = clip_max
+      logger.info('clipping to %s', clip_max)
+      data = np.clip(data, scaling["min"], scaling["max"])
+      max_value = np.max(data)
+    else:
+      logger.info('NOT clipping to %s', clip_max)
+
   data = (data - min_value) * 65535 / (max_value - min_value)
   data = data.astype(np.uint16)
   write_png(data, filename)
@@ -277,10 +296,10 @@ def write_coordinates_batch(data, directory, file_template="object_coordinates_{
   multi_write_image(data, path_template, write_fn=write_png, max_write_threads=max_write_threads)
 
 
-def write_depth_batch(data, directory, file_template="depth_{:05d}.tiff", max_write_threads=16):
+def write_depth_batch(data, directory, file_template="depth_{:05d}.png", max_write_threads=16):
   assert data.ndim == 4 and data.shape[-1] == 1, data.shape
   path_template = str(as_path(directory) / file_template)
-  multi_write_image(data, path_template, write_fn=write_tiff, max_write_threads=max_write_threads)
+  multi_write_image(data, path_template, write_fn=write_scaled_png, max_write_threads=max_write_threads)
 
 
 def write_segmentation_batch(data, directory, file_template="segmentation_{:05d}.png",
