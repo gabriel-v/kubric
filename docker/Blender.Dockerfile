@@ -52,8 +52,7 @@ RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.10 10 
 # --- Clone and compile Blender
 
 # RUN git clone https://git.blender.org/blender.git
-RUN git clone https://github.com/blender/blender.git --tag v3.1.2 --depth 1
-RUN mv v3.1.2 blender
+RUN git clone https://github.com/blender/blender.git --branch blender-v3.2-release --depth 1 blender
 
 RUN mkdir lib && \
     cd lib && \
@@ -64,8 +63,9 @@ RUN cd blender && \
 
 # fix an annoying (no-consequence) bpy shutdown error
 # see https://github.com/google-research/kubric/issues/65
-COPY ./docker/cycles_free_patch.txt /blenderpy/blender
-RUN cd blender && patch -p1 < /blenderpy/blender/cycles_free_patch.txt
+
+# COPY ./docker/cycles_free_patch.txt /blenderpy/blender
+# RUN cd blender && patch -p1 < /blenderpy/blender/cycles_free_patch.txt
 
 RUN cd blender && BUILD_CMAKE_ARGS="-D WITH_OPENVDB=ON" make -j8 bpy
 
