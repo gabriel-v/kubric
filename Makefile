@@ -6,7 +6,7 @@ SHELL = /bin/bash
 .SHELLFLAGS += -e
 
 .EXPORT_ALL_VARIABLES:
-DOCKERTAG = blender320-beta
+DOCKERTAG = blender320-release
 DOCKERORG = gabrielv
 
 
