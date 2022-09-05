@@ -398,6 +398,21 @@ class Blender(core.View):
     asset.observe(KeyframeSetter(cube, "scale"), "scale", type="keyframe")
     return cube
 
+  # @gabriel-v: register blender object as asset without any keyframes
+  @add_asset.register(core.BlenderObjectAsset)
+  @blender_utils.prepare_blender_object
+  def _add_asset(self, asset: core.BlenderObjectAsset):
+    # bpy.ops.mesh.primitive_cube_add()
+    # cube = bpy.context.active_object
+
+    cube = asset.blender_object
+    register_object3d_setters(asset, cube)
+    # asset.observe(AttributeSetter(cube, "active_material",
+    #                               converter=self._convert_to_blender_object), "material")
+    # asset.observe(AttributeSetter(cube, "scale"), "scale")
+    # asset.observe(KeyframeSetter(cube, "scale"), "scale", type="keyframe")
+    return cube
+
   @add_asset.register(core.Sphere)
   @blender_utils.prepare_blender_object
   def _add_asset(self, obj: core.Sphere):

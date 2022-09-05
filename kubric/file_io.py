@@ -137,6 +137,7 @@ def write_palette_png(data: np.array, filename: PathLike,
   assert data.ndim == 3, data.shape
   height, width, channels = data.shape
   assert channels == 1, "Must be grayscale"
+  # import pdb; pdb.set_trace()
 
   if data.dtype in [np.uint16, np.uint32, np.uint64]:
     max_value = np.amax(data)
@@ -152,7 +153,7 @@ def write_palette_png(data: np.array, filename: PathLike,
   if palette is None:
     palette = plotting.hls_palette(np.max(data) + 1)
 
-  w = png.Writer(height, width, palette=palette, bitdepth=8)
+  w = png.Writer(width, height, palette=palette, bitdepth=8)
   with gopen(filename, "wb") as fp:
     w.write(fp, data[:, :, 0])
 
@@ -160,6 +161,7 @@ def write_palette_png(data: np.array, filename: PathLike,
 def write_scaled_png(data: np.array, filename: PathLike,
                      clip_max: Optional[float] = 200) -> Dict[str, float]:
   """Scales data to [0, 1] and then saves as png and returns the scale.
+  import pdb; pdb.set_trace()
 
   Args:
     data: the image (H, W, C) to be written (has to be float32 or float64).
